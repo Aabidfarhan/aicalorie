@@ -1,9 +1,9 @@
-import React, { useState, useMemo } from 'react';
+﻿import React, { useState, useMemo } from 'react';
 import { Plus, X, Search, ChevronRight } from 'lucide-react';
 import clsx from 'clsx';
 import { INDIAN_FOODS } from '../data/indianFoods';
 
-const MealCard = ({ title, icon: Icon, calories, onAddCalories, items = [] }) => {
+const MealCard = ({ title, icon: Icon, calories, onAddCalories, items = [], readOnly = false }) => {
     const [isAdding, setIsAdding] = useState(false);
     const [mode, setMode] = useState('search'); // 'search' or 'manual'
     const [searchTerm, setSearchTerm] = useState('');
@@ -51,7 +51,7 @@ const MealCard = ({ title, icon: Icon, calories, onAddCalories, items = [] }) =>
                         <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">{calories} kcal</p>
                     </div>
                 </div>
-                <button
+                {!readOnly && (<button
                     onClick={() => setIsAdding(!isAdding)}
                     className={clsx(
                         "p-2 rounded-lg transition-all duration-200",
@@ -59,7 +59,7 @@ const MealCard = ({ title, icon: Icon, calories, onAddCalories, items = [] }) =>
                     )}
                 >
                     {isAdding ? <X size={18} /> : <Plus size={18} />}
-                </button>
+                </button>)}
             </div>
 
             {isAdding ? (
@@ -171,10 +171,10 @@ const MealCard = ({ title, icon: Icon, calories, onAddCalories, items = [] }) =>
                     )}
                 </div>
             ) : (
-                <div className="space-y-2 mt-auto overflow-y-auto max-h-[120px] scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-700 pr-1">
+                <div className="space-y-2 mt-auto overflow-y-auto max-h-[240px] scrollbar-thin scrollbar-thumb-slate-200 dark:scrollbar-thumb-slate-700 pr-1">
                     {items.length > 0 ? (
                         <ul className="text-sm text-slate-500 space-y-2">
-                            {items.slice().reverse().slice(0, 4).map((item, idx) => (
+                            {items.slice().reverse().map((item, idx) => (
                                 <li key={idx} className="flex justify-between items-center text-xs p-2 bg-slate-50 dark:bg-slate-900/50 rounded-lg">
                                     <span className="font-medium text-slate-700 dark:text-slate-300 truncate max-w-[120px]" title={item.name || "Meal"}>
                                         {item.name || `Entry ${items.length - idx}`}
@@ -182,10 +182,10 @@ const MealCard = ({ title, icon: Icon, calories, onAddCalories, items = [] }) =>
                                     <span className="text-slate-500 dark:text-slate-400 font-semibold whitespace-nowrap">{item.calories} kcal</span>
                                 </li>
                             ))}
-                            {items.length > 4 && (
-                                <li className="text-center pt-1">
-                                    <span className="text-xs text-slate-400 italic">+{items.length - 4} more items</span>
-                                </li>
+
+
+
+
                             )}
                         </ul>
                     ) : (

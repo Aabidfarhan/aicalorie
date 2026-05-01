@@ -1,15 +1,18 @@
-import React from 'react';
-import { LayoutDashboard, Utensils, TrendingUp, Bot, Settings, Moon, Sun, MessageSquare } from 'lucide-react';
+﻿import React from 'react';
+import { LayoutDashboard, Utensils, TrendingUp, Bot, Settings, Moon, Sun, MessageSquare, LogOut } from 'lucide-react';
 import clsx from 'clsx';
+import { useSessionContext } from '../context/SessionContext';
 
 const Sidebar = ({ activePage, setActivePage, darkMode, toggleDarkMode }) => {
+    const { signOut } = useSessionContext();
+
     const navItems = [
-        { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard },
-        { id: 'meals', label: 'Meals', icon: Utensils },
-        { id: 'chatbot', label: 'AI Chat', icon: MessageSquare },
-        { id: 'progress', label: 'Progress', icon: TrendingUp },
-        { id: 'coach', label: 'Tips & Tricks', icon: Bot },
-        { id: 'settings', label: 'Settings', icon: Settings },
+        { id: 'dashboard', label: 'Dashboard',   icon: LayoutDashboard },
+        { id: 'meals',     label: 'Meals',        icon: Utensils },
+        { id: 'chatbot',   label: 'AI Chat',      icon: MessageSquare },
+        { id: 'progress',  label: 'Progress',     icon: TrendingUp },
+        { id: 'coach',     label: 'Tips & Tricks',icon: Bot },
+        { id: 'settings',  label: 'Settings',     icon: Settings },
     ];
 
     return (
@@ -24,7 +27,6 @@ const Sidebar = ({ activePage, setActivePage, darkMode, toggleDarkMode }) => {
                 {navItems.map((item) => {
                     const Icon = item.icon;
                     const isActive = activePage === item.id;
-
                     return (
                         <button
                             key={item.id}
@@ -44,7 +46,6 @@ const Sidebar = ({ activePage, setActivePage, darkMode, toggleDarkMode }) => {
             </nav>
 
             <div className="p-4 border-t border-slate-100 dark:border-slate-700 space-y-4">
-
                 <button
                     onClick={toggleDarkMode}
                     className="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors"
@@ -53,14 +54,22 @@ const Sidebar = ({ activePage, setActivePage, darkMode, toggleDarkMode }) => {
                     {darkMode ? 'Light Mode' : 'Dark Mode'}
                 </button>
 
+                <button
+                    onClick={signOut}
+                    className="w-full flex items-center gap-3 px-4 py-2 rounded-lg text-sm font-medium text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-500 transition-colors"
+                >
+                    <LogOut size={20} />
+                    Sign Out
+                </button>
+
                 <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-4">
                     <div className="flex items-center gap-3 mb-2">
                         <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600">
                             <Bot size={16} />
                         </div>
-                        <span className="text-sm font-semibold text-emerald-900">Pro Tip</span>
+                        <span className="text-sm font-semibold text-emerald-900 dark:text-emerald-300">Pro Tip</span>
                     </div>
-                    <p className="text-xs text-emerald-700 leading-relaxed">
+                    <p className="text-xs text-emerald-700 dark:text-emerald-400 leading-relaxed">
                         Drink a glass of water before each meal to help digestion.
                     </p>
                 </div>

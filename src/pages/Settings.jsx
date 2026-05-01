@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Save, Ruler, Weight, Activity, Target, Flame } from 'lucide-react';
 import clsx from 'clsx';
+import { useSessionContext } from '../context/SessionContext';
 
 const ACTIVITY_LEVELS = [
     { value: 'sedentary', label: 'Sedentary', desc: 'Little or no exercise' },
@@ -15,22 +16,29 @@ const GOALS = [
     { value: 'gain', label: 'Weight Gain', desc: 'Surplus of ~500 cal/day' },
 ];
 
-const Settings = ({ onSaveProfile }) => {
+const Settings = () => {
+    const { profile: contextProfile, saveProfile } = useSessionContext();
+
     const [profile, setProfile] = useState(() => {
         const saved = localStorage.getItem('calorieCoachProfile');
         return saved ? JSON.parse(saved) : {
             gender: 'male',
             age: 25,
-            height: 175, // cm
-            weight: 70, // kg
+            height: 175,
+            weight: 70,
             activity: 'moderate',
             goal: 'maintain',
-            units: 'metric', // metric (kg/cm) or imperial (lbs/ft)
+            units: 'metric',
             burnedGoal: 450,
             stepsGoal: 6000,
             distanceGoal: 3.2
         };
     });
+
+    // Sync local form state when context profile loads from Supabase
+    useEffect(() => {
+        if (contextProfile) setProfile(contextProfile);
+    }, [contextProfile]);
 
     const [isSaved, setIsSaved] = useState(false);
 
@@ -95,14 +103,7 @@ const Settings = ({ onSaveProfile }) => {
     const handleSave = (e) => {
         e.preventDefault();
         if (!isFormValid) return;
-        const newGoal = calculateGoal();
-        localStorage.setItem('calorieCoachProfile', JSON.stringify(profile));
-
-        // Trigger global update (passed from parent)
-        if (onSaveProfile) {
-            onSaveProfile(newGoal);
-        }
-
+        saveProfile(profile); // updates context → Dashboard re-renders instantly
         setIsSaved(true);
         setTimeout(() => setIsSaved(false), 2000);
     };

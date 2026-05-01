@@ -1,21 +1,36 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import Layout from './components/Layout';
 import Dashboard from './pages/Dashboard';
 import Chatbot from './pages/Chatbot';
 import Meals from './pages/Meals';
 import Settings from './pages/Settings';
+import Coach from './pages/Coach';
+import Progress from './pages/Progress';
+import Auth from './pages/Auth';
+import { SessionProvider, useSessionContext } from './context/SessionContext';
 
-function App() {
+function AppContent() {
   const [activePage, setActivePage] = useState('dashboard');
   const [darkMode, setDarkMode] = useState(false);
+  const { isAnonymous, authReady } = useSessionContext();
 
   React.useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
+    document.documentElement.classList.toggle('dark', darkMode);
   }, [darkMode]);
+
+  // Wait for Supabase to resolve session before rendering
+  if (!authReady) {
+    return (
+      <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  // Show auth page if not logged in with a real account
+  if (isAnonymous) {
+    return <Auth />;
+  }
 
   return (
     <Layout
@@ -27,19 +42,18 @@ function App() {
       {activePage === 'dashboard' && <Dashboard />}
       {activePage === 'chatbot' && <Chatbot />}
       {activePage === 'meals' && <Meals />}
-      {activePage === 'settings' && <Settings onSaveProfile={() => window.location.reload()} />}
-      {activePage === 'progress' && (
-        <div className="flex flex-col items-center justify-center h-96 text-center animate-in fade-in">
-          <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-4">
-            <span className="text-2xl">🚧</span>
-          </div>
-          <h2 className="text-xl font-bold text-slate-700">Coming Soon</h2>
-          <p className="text-slate-500 mt-2 max-w-sm">
-            The {activePage} page is currently under construction. Check back later!
-          </p>
-        </div>
-      )}
+      {activePage === 'settings' && <Settings />}
+      {activePage === 'coach' && <Coach />}
+      {activePage === 'progress' && <Progress />}
     </Layout>
+  );
+}
+
+function App() {
+  return (
+    <SessionProvider>
+      <AppContent />
+    </SessionProvider>
   );
 }
 

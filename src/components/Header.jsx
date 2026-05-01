@@ -1,10 +1,22 @@
-import React from 'react';
+﻿import React from 'react';
 import { Search, Bell } from 'lucide-react';
+import DateNav from './DateNav';
+import { useSessionContext } from '../context/SessionContext';
+
+const PAGES_WITH_DATE = ['dashboard', 'progress'];
 
 const Header = ({ title }) => {
+    const { selectedDate, setSelectedDate } = useSessionContext();
+    const showDate = PAGES_WITH_DATE.includes(title);
+
     return (
         <header className="h-16 flex items-center justify-between px-8 bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm fixed top-0 right-0 left-64 z-40 border-b border-white/20 dark:border-slate-700/50 transition-colors duration-300">
-            <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 capitalize">{title}</h2>
+            <div className="flex items-center gap-4">
+                <h2 className="text-xl font-bold text-slate-800 dark:text-slate-100 capitalize">{title}</h2>
+                {showDate && (
+                    <DateNav selectedDate={selectedDate} setSelectedDate={setSelectedDate} />
+                )}
+            </div>
 
             <div className="flex items-center gap-6">
                 <div className="relative">
@@ -23,7 +35,7 @@ const Header = ({ title }) => {
 
                 <div className="flex items-center gap-3 border-l border-slate-200 dark:border-slate-700 pl-6">
                     <div className="text-right hidden md:block">
-                        <p className="text-sm font-semibold text-slate-700 dark:text-slate-200"> ARSHATH</p>
+                        <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">ARSHATH</p>
                         <p className="text-xs text-slate-500 dark:text-slate-400">Free Plan</p>
                     </div>
                     <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400 font-bold border-2 border-white dark:border-slate-800 shadow-sm">
