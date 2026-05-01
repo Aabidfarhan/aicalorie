@@ -6,6 +6,7 @@ import MealCard from '../components/MealCard';
 import WeeklyChart from '../components/WeeklyChart';
 import AICoachCard from '../components/AICoachCard';
 import MacroOverview from '../components/MacroOverview';
+import WaterTracker from '../components/WaterTracker';
 
 const DEFAULT_GOAL = 2400;
 
@@ -18,6 +19,7 @@ const INITIAL_DATA = {
         dinner: { calories: 0, items: [] },
         snacks: { calories: 0, items: [] },
     },
+    water: 0,
     // Initialize with empty history or some mock data if needed, but for "Real" feel let's start empty or minimal
     history: []
 };
@@ -56,6 +58,7 @@ const Dashboard = () => {
                     dinner: { calories: 0, items: [] },
                     snacks: { calories: 0, items: [] },
                 },
+                water: 0,
                 history: [...prev.history, newEntry].slice(-6) // Keep last 6 + today (dyn calc)
             }));
         }
@@ -207,6 +210,12 @@ const Dashboard = () => {
                     subValue={`${activityTargets.distanceGoal}km`}
                 />
             </div>
+
+            {/* Water Tracker */}
+            <WaterTracker 
+                water={data.water || 0} 
+                setWater={(w) => setData(prev => ({ ...prev, water: w }))} 
+            />
 
             {/* Charts & Graphs Row */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-auto lg:h-[22rem]">
