@@ -149,7 +149,7 @@ export default function Progress() {
     // pre-fill weight input when selected date changes
     useEffect(() => {
         setWeightInput(weights[selectedDate] ? String(weights[selectedDate]) : '');
-    }, [selected, weights]);
+    }, [selectedDate, weights]);
 
     // â”€â”€ save weight â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     const saveWeight = async () => {
@@ -291,7 +291,7 @@ export default function Progress() {
                     {/* Date header */}
                     <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-5 soft-shadow">
                         <p className="text-xs text-slate-400 dark:text-slate-500 mb-1">
-                            {new Date(selected + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                            {new Date(selectedDate + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
                         </p>
 
                         {/* Status badge */}

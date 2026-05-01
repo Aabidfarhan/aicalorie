@@ -1,5 +1,5 @@
 ﻿import React from 'react';
-import { Search, Bell } from 'lucide-react';
+import { Bell } from 'lucide-react';
 import DateNav from './DateNav';
 import { useSessionContext } from '../context/SessionContext';
 
@@ -19,15 +19,6 @@ const Header = ({ title }) => {
             </div>
 
             <div className="flex items-center gap-6">
-                <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                    <input
-                        type="text"
-                        placeholder="Search healthy foods..."
-                        className="pl-10 pr-4 py-2 rounded-full bg-white dark:bg-slate-800 border-none focus:ring-2 focus:ring-emerald-100 dark:focus:ring-emerald-900 text-sm w-64 shadow-sm text-slate-600 dark:text-slate-200 placeholder:text-slate-400"
-                    />
-                </div>
-
                 <button className="relative p-2 text-slate-400 dark:text-slate-500 hover:text-emerald-500 dark:hover:text-emerald-400 transition-colors">
                     <Bell size={20} />
                     <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white dark:border-slate-800"></span>
