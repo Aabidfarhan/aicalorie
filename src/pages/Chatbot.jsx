@@ -3,20 +3,8 @@ import { Send, Bot, User, Sparkles, Trash2 } from 'lucide-react';
 import clsx from 'clsx';
 import { useSessionContext } from '../context/SessionContext';
 
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
-
-const SYSTEM_PROMPT = `You are a friendly, knowledgeable nutrition and fitness coach inside a calorie tracking app called Calorie Coach. 
-You help users with:
-- Calorie and macro information for Indian and international foods
-- Meal planning and diet advice (weight loss, muscle gain, maintenance)
-- Healthy recipe suggestions using Indian ingredients
-- Interpreting their daily calorie and macro data
-- General wellness, hydration, sleep, and fitness tips
-
-Keep responses concise, practical, and encouraging. Use bullet points for lists. 
-When asked about specific foods, always mention approximate calories and key macros.
-Do not provide medical diagnoses. Always recommend consulting a doctor for medical concerns.`;
+// 🛑 NOTICE: The API Key and System Prompt have been removed from here!
+// They now live securely in your backend server.
 
 const QUICK_PROMPTS = [
     'How many calories in Idli Sambar?',
@@ -27,32 +15,24 @@ const QUICK_PROMPTS = [
 ];
 
 async function callGemini(history, userText) {
-    // Build contents array: system instruction + conversation history + new user message
-    const contents = [
-        ...history.map(m => ({
-            role: m.role === 'user' ? 'user' : 'model',
-            parts: [{ text: m.text }]
-        })),
-        { role: 'user', parts: [{ text: userText }] }
-    ];
-
-    const res = await fetch(GEMINI_URL, {
+    // ✅ This now points to your local Node.js backend
+    const res = await fetch('http://localhost:5000/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-            system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
-            contents,
-            generationConfig: { temperature: 0.7, maxOutputTokens: 512 }
+            history: history,
+            userText: userText
         })
     });
 
     if (!res.ok) {
         const err = await res.json().catch(() => ({}));
-        throw new Error(err?.error?.message || `HTTP ${res.status}`);
+        throw new Error(err?.error || `HTTP ${res.status}`);
     }
 
     const data = await res.json();
-    return data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, I could not generate a response.';
+    // Your backend sends back { reply: "..." }
+    return data.reply || 'Sorry, I could not generate a response.';
 }
 
 export default function Chatbot() {
@@ -120,7 +100,7 @@ export default function Chatbot() {
                         <h3 className="font-bold text-slate-800 dark:text-slate-100">AI Nutrition Coach</h3>
                         <div className="flex items-center gap-1.5">
                             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Gemini 2.0 Flash</span>
+                            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Gemini Secure Backend</span>
                         </div>
                     </div>
                 </div>
