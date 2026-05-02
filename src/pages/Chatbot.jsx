@@ -1,156 +1,193 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Sparkles } from 'lucide-react';
+﻿import { useState, useRef, useEffect } from 'react';
+import { Send, Bot, User, Sparkles, Trash2 } from 'lucide-react';
 import clsx from 'clsx';
+import { useSessionContext } from '../context/SessionContext';
 
-const INITIAL_MESSAGES = [
-    {
-        id: 1,
-        role: 'system',
-        text: "Hi! I'm your personal nutrition assistant. I can help you with meal ideas, calorie tracking, or general wellness advice. What's on your mind?"
-    }
+const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_API_KEY}`;
+
+const SYSTEM_PROMPT = `You are a friendly, knowledgeable nutrition and fitness coach inside a calorie tracking app called Calorie Coach. 
+You help users with:
+- Calorie and macro information for Indian and international foods
+- Meal planning and diet advice (weight loss, muscle gain, maintenance)
+- Healthy recipe suggestions using Indian ingredients
+- Interpreting their daily calorie and macro data
+- General wellness, hydration, sleep, and fitness tips
+
+Keep responses concise, practical, and encouraging. Use bullet points for lists. 
+When asked about specific foods, always mention approximate calories and key macros.
+Do not provide medical diagnoses. Always recommend consulting a doctor for medical concerns.`;
+
+const QUICK_PROMPTS = [
+    'How many calories in Idli Sambar?',
+    'Best high-protein Indian breakfast?',
+    'How to lose 5kg in a month?',
+    'What should I eat post-workout?',
+    'Is Biryani good for weight loss?',
 ];
 
-const Chatbot = () => {
-    const [messages, setMessages] = useState(INITIAL_MESSAGES);
+async function callGemini(history, userText) {
+    // Build contents array: system instruction + conversation history + new user message
+    const contents = [
+        ...history.map(m => ({
+            role: m.role === 'user' ? 'user' : 'model',
+            parts: [{ text: m.text }]
+        })),
+        { role: 'user', parts: [{ text: userText }] }
+    ];
+
+    const res = await fetch(GEMINI_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+            contents,
+            generationConfig: { temperature: 0.7, maxOutputTokens: 512 }
+        })
+    });
+
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err?.error?.message || `HTTP ${res.status}`);
+    }
+
+    const data = await res.json();
+    return data.candidates?.[0]?.content?.parts?.[0]?.text || 'Sorry, I could not generate a response.';
+}
+
+export default function Chatbot() {
+    const { profile, calorieGoal } = useSessionContext();
+    const [messages, setMessages] = useState([{
+        id: 1, role: 'assistant',
+        text: `Hi! I'm your AI nutrition coach powered by Gemini. I can help with calorie info, meal planning, and wellness tips.\n\nYour current goal: **${calorieGoal} kcal/day** (${profile?.goal === 'lose' ? 'Weight Loss' : profile?.goal === 'gain' ? 'Muscle Gain' : 'Maintenance'}). What would you like to know?`
+    }]);
     const [input, setInput] = useState('');
     const [isTyping, setIsTyping] = useState(false);
+    const [error, setError] = useState(null);
     const messagesEndRef = useRef(null);
 
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    };
-
     useEffect(() => {
-        scrollToBottom();
-    }, [messages]);
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    }, [messages, isTyping]);
 
-    const handleSend = (e) => {
-        e.preventDefault();
-        if (!input.trim()) return;
+    const sendMessage = async (text) => {
+        if (!text.trim() || isTyping) return;
+        setError(null);
 
-        const userMessage = {
-            id: Date.now(),
-            role: 'user',
-            text: input
-        };
-
-        setMessages(prev => [...prev, userMessage]);
+        const userMsg = { id: Date.now(), role: 'user', text: text.trim() };
+        setMessages(prev => [...prev, userMsg]);
         setInput('');
         setIsTyping(true);
 
-        // Simulate AI response
-        setTimeout(() => {
-            const aiResponses = [
-                "That sounds like a great choice! Make sure to balance it with some protein.",
-                "Remember to stay hydrated throughout the day!",
-                "Based on your goals, you might want to try adding more fiber to that meal.",
-                "Great job tracking your intake! Consistency is key.",
-                "Have you considered meal prepping for the week? It can save a lot of time and calories.",
-                "Calculated! That fits well within your daily limit."
-            ];
-
-            const randomResponse = aiResponses[Math.floor(Math.random() * aiResponses.length)];
-
-            const aiMessage = {
-                id: Date.now() + 1,
-                role: 'system',
-                text: randomResponse
-            };
-
-            setMessages(prev => [...prev, aiMessage]);
+        try {
+            // Pass only assistant/user messages (not the initial greeting) as history
+            const history = messages.filter(m => m.role !== 'assistant' || m.id !== 1);
+            const reply = await callGemini(history, text.trim());
+            setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', text: reply }]);
+        } catch (e) {
+            setError(e.message);
+            setMessages(prev => [...prev, { id: Date.now() + 1, role: 'assistant', text: `Sorry, something went wrong: ${e.message}` }]);
+        } finally {
             setIsTyping(false);
-        }, 1500);
+        }
+    };
+
+    const handleSubmit = (e) => { e.preventDefault(); sendMessage(input); };
+    const clearChat = () => setMessages([{ id: 1, role: 'assistant', text: `Chat cleared. How can I help you?` }]);
+
+    // Simple markdown-ish renderer: bold **text**, bullet points
+    const renderText = (text) => {
+        return text.split('\n').map((line, i) => {
+            const bold = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            const isBullet = line.trim().startsWith('* ') || line.trim().startsWith('- ');
+            if (isBullet) {
+                return <li key={i} className="ml-4 list-disc" dangerouslySetInnerHTML={{ __html: bold.replace(/^[\*\-]\s/, '') }} />;
+            }
+            return <p key={i} className={line === '' ? 'h-2' : ''} dangerouslySetInnerHTML={{ __html: bold }} />;
+        });
     };
 
     return (
-        <div className="flex flex-col h-[calc(100vh-140px)] bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 soft-shadow overflow-hidden transition-all duration-300">
+        <div className="flex flex-col h-[calc(100vh-140px)] bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 soft-shadow overflow-hidden">
 
-            {/* Chat Header */}
-            <div className="p-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-                    <Bot size={20} />
-                </div>
-                <div>
-                    <h3 className="font-bold text-slate-800 dark:text-slate-100">AI Wellness Coach</h3>
-                    <div className="flex items-center gap-1.5">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                        <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Online</span>
+            {/* Header */}
+            <div className="p-4 border-b border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                        <Bot size={20} />
+                    </div>
+                    <div>
+                        <h3 className="font-bold text-slate-800 dark:text-slate-100">AI Nutrition Coach</h3>
+                        <div className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                            <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Gemini 2.0 Flash</span>
+                        </div>
                     </div>
                 </div>
+                <button onClick={clearChat} className="p-2 rounded-lg text-slate-400 hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors" title="Clear chat">
+                    <Trash2 size={16} />
+                </button>
             </div>
 
-            {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-6">
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
                 {messages.map((msg) => {
                     const isUser = msg.role === 'user';
                     return (
-                        <div
-                            key={msg.id}
-                            className={clsx(
-                                "flex gap-4 max-w-[80%]",
-                                isUser ? "ml-auto flex-row-reverse" : ""
-                            )}
-                        >
-                            <div className={clsx(
-                                "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0",
-                                isUser ? "bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300" : "bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400"
-                            )}>
-                                {isUser ? <User size={16} /> : <Bot size={16} />}
+                        <div key={msg.id} className={clsx('flex gap-3', isUser ? 'ml-auto flex-row-reverse max-w-[80%]' : 'max-w-[85%]')}>
+                            <div className={clsx('w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-1',
+                                isUser ? 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300' : 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-600 dark:text-emerald-400')}>
+                                {isUser ? <User size={15} /> : <Bot size={15} />}
                             </div>
-
-                            <div className={clsx(
-                                "p-4 rounded-2xl text-sm leading-relaxed shadow-sm",
-                                isUser
-                                    ? "bg-slate-800 dark:bg-slate-700 text-white rounded-tr-sm"
-                                    : "bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 text-slate-700 dark:text-slate-300 rounded-tl-sm"
-                            )}>
-                                {msg.text}
+                            <div className={clsx('px-4 py-3 rounded-2xl text-sm leading-relaxed shadow-sm space-y-1',
+                                isUser ? 'bg-slate-800 dark:bg-slate-700 text-white rounded-tr-sm' : 'bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 text-slate-700 dark:text-slate-300 rounded-tl-sm')}>
+                                {renderText(msg.text)}
                             </div>
                         </div>
                     );
                 })}
 
                 {isTyping && (
-                    <div className="flex gap-4 max-w-[80%]">
+                    <div className="flex gap-3 max-w-[85%]">
                         <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center flex-shrink-0 text-emerald-600 dark:text-emerald-400">
-                            <Bot size={16} />
+                            <Bot size={15} />
                         </div>
-                        <div className="bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 p-4 rounded-2xl rounded-tl-sm flex items-center gap-1">
+                        <div className="bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 px-4 py-3 rounded-2xl rounded-tl-sm flex items-center gap-1">
                             <span className="w-2 h-2 rounded-full bg-slate-400 animate-bounce"></span>
-                            <span className="w-2 h-2 rounded-full bg-slate-400 animate-bounce [animation-delay:0.2s]"></span>
-                            <span className="w-2 h-2 rounded-full bg-slate-400 animate-bounce [animation-delay:0.4s]"></span>
+                            <span className="w-2 h-2 rounded-full bg-slate-400 animate-bounce [animation-delay:0.15s]"></span>
+                            <span className="w-2 h-2 rounded-full bg-slate-400 animate-bounce [animation-delay:0.3s]"></span>
                         </div>
                     </div>
                 )}
                 <div ref={messagesEndRef} />
             </div>
 
-            {/* Input Area */}
-            <div className="p-4 bg-white dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700">
-                <form onSubmit={handleSend} className="relative flex items-center">
-                    <input
-                        type="text"
-                        value={input}
-                        onChange={(e) => setInput(e.target.value)}
-                        placeholder="Ask about calories, recipes, or health tips..."
-                        className="w-full pl-4 pr-12 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all dark:text-slate-200 dark:placeholder-slate-500"
-                    />
-                    <button
-                        type="submit"
-                        disabled={!input.trim()}
-                        className="absolute right-2 p-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                    >
-                        <Send size={18} />
+            {/* Quick prompts */}
+            <div className="px-4 pb-2 flex gap-2 overflow-x-auto scrollbar-none">
+                {QUICK_PROMPTS.map(p => (
+                    <button key={p} onClick={() => sendMessage(p)} disabled={isTyping}
+                        className="flex-shrink-0 text-xs px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-colors disabled:opacity-50">
+                        {p}
                     </button>
-                </form>
-                <div className="flex items-center gap-2 mt-2 px-2">
-                    <Sparkles size={12} className="text-emerald-500" />
-                    <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">AI Powered Assistant</p>
-                </div>
+                ))}
             </div>
 
+            {/* Input */}
+            <div className="p-4 bg-white dark:bg-slate-800 border-t border-slate-100 dark:border-slate-700">
+                <form onSubmit={handleSubmit} className="relative flex items-center">
+                    <input type="text" value={input} onChange={e => setInput(e.target.value)}
+                        placeholder="Ask about calories, recipes, or health tips..."
+                        className="w-full pl-4 pr-12 py-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-transparent outline-none transition-all dark:text-slate-200 dark:placeholder-slate-500 text-sm" />
+                    <button type="submit" disabled={!input.trim() || isTyping}
+                        className="absolute right-2 p-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                        <Send size={16} />
+                    </button>
+                </form>
+                <div className="flex items-center gap-2 mt-2 px-1">
+                    <Sparkles size={11} className="text-emerald-500" />
+                    <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold">Powered by Google Gemini</p>
+                </div>
+            </div>
         </div>
     );
-};
-
-export default Chatbot;
+}
